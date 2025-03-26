@@ -1,7 +1,6 @@
 # Import required packages
 import streamlit as st
 import snowflake.connector
-from snowflake.snowpark.session import Session
 
 # App Title
 st.title("🥤 Customize Your Smoothie! 🥤")
