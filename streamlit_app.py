@@ -22,7 +22,6 @@ def create_snowflake_session():
     }
     return Session.builder.configs(connection_parameters).create()
 
-
 # Fetch fruit options
 try:
     fruit_df = session.table("fruit_options").select("FRUIT_NAME").to_pandas()
