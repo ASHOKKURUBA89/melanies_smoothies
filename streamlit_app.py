@@ -23,26 +23,22 @@ def create_snowflake_session():
     return Session.builder.configs(connection_parameters).create()
 
 # Fetch fruit options
-try:
-    fruit_df = session.table("fruit_options").select("FRUIT_NAME").to_pandas()
-    fruit_list = fruit_df["FRUIT_NAME"].tolist()
-except Exception as e:
-    st.error(f"Error fetching fruit options: {e}")
-    fruit_list = []
-
-# Multi-select dropdown
-ingredients_list = st.multiselect("Choose up to 5 ingredients:", fruit_list)
-
-# Display selected ingredients
+# Display the selected ingredients
 if ingredients_list:
-    st.write("Your smoothie will include:", ", ".join(ingredients_list))
+    
+    ingredients_string=''
+    for fruit_chosen in ingredients_list:
+        ingredients_string += fruit_chosen +' '
 
-# Order submission
-if st.button("Submit Order"):
-    ingredients_string = ", ".join(ingredients_list)
-    try:
-        insert_query = f"INSERT INTO smoothies.public.orders (ingredients) VALUES ('{ingredients_string}')"
-        session.sql(insert_query).collect()
-        st.success("Your Smoothie is ordered! ✅")
-    except Exception as e:
-        st.error(f"Error submitting order: {e}")
+    st.write(ingredients_string)
+
+my_insert_stmt = """ insert into smoothies.public.orders(ingredients)
+            values ('""" + ingredients_string + """')"""
+
+st.write(my_insert_stmt)
+
+time_to_insert = st.button('Submit Order')
+
+if time_to_insert:
+        session.sql(my_insert_stmt).collect()
+        st.success('Your Smoothie is ordered!', icon='✅')
