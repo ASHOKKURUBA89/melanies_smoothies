@@ -1,7 +1,5 @@
 # Import required packages
 import streamlit as st
-import snowflake.connector
-
 # App Title
 st.title("🥤 Customize Your Smoothie! 🥤")
 
