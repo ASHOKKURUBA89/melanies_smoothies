@@ -3,7 +3,6 @@ import streamlit as st
 import snowflake.connector
 import pandas as pd
 
-
 # Write directly to the app
 st.title("🥤 Customize Your Smoothie! 🥤")
 st.write("Choose the fruits you want in your custom Smoothie!")
