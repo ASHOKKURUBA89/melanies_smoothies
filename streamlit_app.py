@@ -22,27 +22,45 @@ def create_snowflake_session():
     }
     return Session.builder.configs(connection_parameters).create()
 
-# Fetch fruit options
-try:
-    fruit_df = session.table("fruit_options").select("FRUIT_NAME").to_pandas()
-    fruit_list = fruit_df["FRUIT_NAME"].tolist()
-except Exception as e:
-    st.error(f"Error fetching fruit options: {e}")
-    fruit_list = []
-
-# Multi-select dropdown
-ingredients_list = st.multiselect("Choose up to 5 ingredients:", fruit_list)
-
-# Display selected ingredients
-if ingredients_list:
-    st.write("Your smoothie will include:", ", ".join(ingredients_list))
-
-# Order submission
-if st.button("Submit Order"):
-    ingredients_string = ", ".join(ingredients_list)
+# ✅ Function to Create Snowflake Session (Fixed session initialization)
+@st.cache_resource
+def create_snowflake_session():
     try:
-        insert_query = f"INSERT INTO smoothies.public.orders (ingredients) VALUES ('{ingredients_string}')"
-        session.sql(insert_query).collect()
-        st.success("Your Smoothie is ordered! ✅")
+        return Session.builder.configs(connection_parameters).create()
     except Exception as e:
-        st.error(f"Error submitting order: {e}")
+        st.error("❌ Error connecting to Snowflake: " + str(e))
+        return None  # Return None if connection fails
+
+# Create a Snowflake session (Ensure it's created before use)
+session = create_snowflake_session()
+
+# ✅ Ensure session exists before querying Snowflake
+fruit_options = []
+if session:
+    try:
+        my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME')).collect()
+        fruit_options = [row["FRUIT_NAME"] for row in my_dataframe]  # Extract fruit names
+    except Exception as e:
+        st.error("❌ Error fetching fruit options from Snowflake: " + str(e))
+
+# Multi-Select Dropdown for Ingredients
+ingredients_list = st.multiselect("Choose up to 5 ingredients:", fruit_options)
+
+# Display Selected Ingredients
+if ingredients_list:
+    ingredients_string = ", ".join(ingredients_list)
+    st.write("Your chosen ingredients:", ingredients_string)
+
+    # Construct SQL Insert Statement
+    my_insert_stmt = f"INSERT INTO smoothies.public.orders(ingredients) VALUES ('{ingredients_string}')"
+
+    # Show Insert Statement for Debugging
+    st.write("SQL Query:", my_insert_stmt)
+
+    # Submit Order Button
+    if st.button("Submit Order") and session:
+        try:
+            session.sql(my_insert_stmt).collect()
+            st.success("✅ Your Smoothie is ordered!")
+        except Exception as e:
+            st.error("❌ Error inserting order into Snowflake: " + str(e))
