@@ -22,8 +22,6 @@ def create_snowflake_session():
     }
     return Session.builder.configs(connection_parameters).create()
 
-# Create Snowflake session
-session = create_snowflake_session()
 
 # Fetch fruit options
 try:
