@@ -1,50 +1,54 @@
-# Import python packages
+# Import required packages
 import streamlit as st
-from snowflake.snowpark.context import get_active_session
+import snowflake.connector
+from snowflake.snowpark.session import Session
 
-# Write directly to the app
-st.title(":cup_with_straw: Customize Your Smoothie! :cup_with_straw:")
-st.write(
-    """
-    Choose the fruits you want in your custom Smoothie!
-    """
-)
+# App Title
+st.title("🥤 Customize Your Smoothie! 🥤")
 
+st.write("Choose the fruits you want in your custom Smoothie!")
 
-from snowflake.snowpark.functions import col
+# User input for smoothie name
+name_on_order = st.text_input("Name on Smoothie:")
+st.write("The name on your Smoothie will be:", name_on_order)
 
+# Snowflake connection function
+@st.cache_resource
+def create_snowflake_session():
+    connection_parameters = {
+        "account": "ZXIXOIX-UCB52362",
+        "user": "ASHOKKURUBA",
+        "password": "Moveoutnow@123",
+        "warehouse": "COMPUTE_WH",
+        "database": "SMOOTHIES",
+        "schema": "PUBLIC",
+    }
+    return Session.builder.configs(connection_parameters).create()
 
-name_on_order = st.text_input('Name on Smoothie:')
-st.write('The name on your Smoothie will be:', name_on_order)
+# Create Snowflake session
+session = create_snowflake_session()
 
+# Fetch fruit options
+try:
+    fruit_df = session.table("fruit_options").select("FRUIT_NAME").to_pandas()
+    fruit_list = fruit_df["FRUIT_NAME"].tolist()
+except Exception as e:
+    st.error(f"Error fetching fruit options: {e}")
+    fruit_list = []
 
-session = get_active_session()
-my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
-#st.dataframe(data=my_dataframe, use_container_width=True)
+# Multi-select dropdown
+ingredients_list = st.multiselect("Choose up to 5 ingredients:", fruit_list)
 
-ingredients_list = st.multiselect(
-    'Choose up to 5 ingredients:',
-    my_dataframe
-)
-
-
-# Display the selected ingredients
+# Display selected ingredients
 if ingredients_list:
-    
-    ingredients_string=''
-    for fruit_chosen in ingredients_list:
-        ingredients_string += fruit_chosen +' '
+    st.write("Your smoothie will include:", ", ".join(ingredients_list))
 
-    st.write(ingredients_string)
-
-my_insert_stmt = """ insert into smoothies.public.orders(ingredients)
-            values ('""" + ingredients_string + """')"""
-
-st.write(my_insert_stmt)
-
-time_to_insert = st.button('Submit Order')
-
-if time_to_insert:
-        session.sql(my_insert_stmt).collect()
-        st.success('Your Smoothie is ordered!', icon='✅')
-    
+# Order submission
+if st.button("Submit Order"):
+    ingredients_string = ", ".join(ingredients_list)
+    try:
+        insert_query = f"INSERT INTO smoothies.public.orders (ingredients) VALUES ('{ingredients_string}')"
+        session.sql(insert_query).collect()
+        st.success("Your Smoothie is ordered! ✅")
+    except Exception as e:
+        st.error(f"Error submitting order: {e}")
