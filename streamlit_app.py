@@ -28,8 +28,6 @@ def create_snowflake_session():
     try:
         return Session.builder.configs(connection_parameters).create()
     except Exception as e:
-        st.error("❌ Error connecting to Snowflake: " + str(e))
-        return None  # Return None if connection fails
 
 # Create a Snowflake session (Ensure it's created before use)
 session = create_snowflake_session()
