@@ -25,7 +25,6 @@ def create_snowflake_session():
 # Fetch fruit options
 # Display the selected ingredients
 if ingredients_list:
-    
     ingredients_string=''
     for fruit_chosen in ingredients_list:
         ingredients_string += fruit_chosen +' '
