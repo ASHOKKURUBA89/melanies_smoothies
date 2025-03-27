@@ -2,7 +2,6 @@
 import streamlit as st
 # App Title
 st.title("🥤 Customize Your Smoothie! 🥤")
-
 st.write("Choose the fruits you want in your custom Smoothie!")
 
 # User input for smoothie name
