@@ -1,61 +1,54 @@
-# Import required packages
+# Import python packages
 import streamlit as st
-# App Title
-st.title("🥤 Customize Your Smoothie! 🥤")
-st.write("Choose the fruits you want in your custom Smoothie!")
+import requests
+#from snowflake.snowpark.context import get_active_session
+from snowflake.snowpark.functions import col
+# --- Comments here : ------
+# Pandas code here : variable(search_on) used to pick the matched Fruit_Name column with the Search_On column value passed with the selected Fruit value from the list
+# Write directly to the app
 
-# User input for smoothie name
-name_on_order = st.text_input("Name on Smoothie:")
-st.write("The name on your Smoothie will be:", name_on_order)
+st.title(":cup_with_straw: Customize your Smoothie :cup_with_straw:")
+st.write("""Choose the fruits you want in your custom, *Smoothie!*. """)
 
-# Snowflake connection function
-@st.cache_resource
-def create_snowflake_session():
-    connection_parameters = {
-        "account": "ZXIXOIX-UCB52362",
-        "user": "ASHOKKURUBA",
-        "password": "Moveoutnow@123",
-        "warehouse": "COMPUTE_WH",
-        "database": "SMOOTHIES",
-        "schema": "PUBLIC",
-    }
-    return Session.builder.configs(connection_parameters).create()
+name_on_order = st.text_input('Name of Smoothie:')
+st.write('The name on your Smoothie will be :',name_on_order)
 
-# ✅ Function to Create Snowflake Session (Fixed session initialization)
-@st.cache_resource
-def create_snowflake_session():
-    try:
-        return Session.builder.configs(connection_parameters).create()
-    except Exception as e:
-# Create a Snowflake session (Ensure it's created before use)
-session = create_snowflake_session()
-# ✅ Ensure session exists before querying Snowflake
-fruit_options = []
-if session:
-    try:
-        my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME')).collect()
-        fruit_options = [row["FRUIT_NAME"] for row in my_dataframe]  # Extract fruit names
-    except Exception as e:
-        st.error("❌ Error fetching fruit options from Snowflake: " + str(e))
+cnx = st.connection("snowflake")
+session = cnx.session()
 
-# Multi-Select Dropdown for Ingredients
-ingredients_list = st.multiselect("Choose up to 5 ingredients:", fruit_options)
+my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'),col('SEARCH_ON'))
+#st.dataframe(data=my_dataframe, use_container_width=True)
+#st.stop()
 
-# Display Selected Ingredients
-if ingredients_list:
-    ingredients_string = ", ".join(ingredients_list)
-    st.write("Your chosen ingredients:", ingredients_string)
+# Convert the Snowpark Dataframe to a Pandas Dataframe so we can use the LOC function
+pd_df=my_dataframe.to_pandas()
+#st.dataframe(pd_df)
+#st.stop()
 
-    # Construct SQL Insert Statement
-    my_insert_stmt = f"INSERT INTO smoothies.public.orders(ingredients) VALUES ('{ingredients_string}')"
-
-    # Show Insert Statement for Debugging
-    st.write("SQL Query:", my_insert_stmt)
-
-    # Submit Order Button
-    if st.button("Submit Order") and session:
-        try:
-            session.sql(my_insert_stmt).collect()
-            st.success("✅ Your Smoothie is ordered!")
-        except Exception as e:
-            st.error("❌ Error inserting order into Snowflake: " + str(e))
+ingredeient_list = st.multiselect('Choose upto 5 ingredients:'
+                                  ,my_dataframe
+                                  ,max_selections = 5
+                                 )
+if ingredeient_list:    
+    ingredients_string = ''
+    for fruit_chosen in ingredeient_list:
+        ingredients_string += fruit_chosen+' '        
+        search_on=pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]       
+        #st.write('The search value for ', fruit_chosen,' is ', search_on, '.')      
+        
+        st.subheader(fruit_chosen + ' Nutrition Information')
+        smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/" + search_on)
+        sf_df = st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
+        
+    #st.write(ingredients_string)
+    my_insert_stmt = """ insert into smoothies.public.orders(ingredients,name_on_order)
+            values ('""" + ingredients_string + """','""" + name_on_order +"""')"""
+    
+    #st.write(my_insert_stmt)
+    #st.stop()
+    time_to_insert =st.button('Submit Order')
+    
+    if time_to_insert:
+       session.sql(my_insert_stmt).collect()
+        
+       st.success('Your Smoothie is ordered!', icon="✅")
