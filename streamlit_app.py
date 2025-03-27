@@ -27,10 +27,8 @@ def create_snowflake_session():
     try:
         return Session.builder.configs(connection_parameters).create()
     except Exception as e:
-
 # Create a Snowflake session (Ensure it's created before use)
 session = create_snowflake_session()
-
 # ✅ Ensure session exists before querying Snowflake
 fruit_options = []
 if session:
